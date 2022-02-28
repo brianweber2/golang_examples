@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+type logWriter struct{}
+
 func main() {
 	resp, err := http.Get("https://google.com")
 	if err != nil {
@@ -20,6 +22,10 @@ func main() {
 
 	// io.Copy(os.Stdout, resp.Body)
 
+	// Custom interface implementation.
+	// lw := logWriter{}
+	// io.Copy(lw, resp.Body)
+
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -31,4 +37,10 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("%s", body)
+}
+
+func (logWriter) Write(bs []byte) (int, error) {
+	fmt.Println(string(bs))
+	fmt.Println("Just wrote this many bytes", len(bs))
+	return len(bs), nil
 }
