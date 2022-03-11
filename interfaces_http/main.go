@@ -23,8 +23,8 @@ func main() {
 	// io.Copy(os.Stdout, resp.Body)
 
 	// Custom interface implementation.
-	// lw := logWriter{}
-	// io.Copy(lw, resp.Body)
+	lw := logWriter{}
+	io.Copy(lw, resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
