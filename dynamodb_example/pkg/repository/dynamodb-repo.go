@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -11,14 +12,31 @@ import (
 	"github.com/brianweber2/golang_examples/dynamodb_example/pkg/models"
 )
 
+const (
+	MetricsTable      = "S360-METRICS"
+	S360ServicesTable = "S360-SERVICES"
+)
+
+// Tables - DynamoDB Table Names
+type Tables struct {
+	MetricTable       string
+	S360ServicesTable string
+}
+
+// tables instantiates Tables struct with the env variables
+var tables = Tables{
+	MetricTable:       os.Getenv(MetricsTable),
+	S360ServicesTable: os.Getenv(S360ServicesTable),
+}
+
 type dynamoDBRepo struct {
-	tableName string
+	tableNames *Tables
 }
 
 // NewDynamoDBRepository is the constructor function for the repo
-func NewDynamoDBRepository() AssetsRepository {
+func NewDynamoDBRepository() OpexRepository {
 	return &dynamoDBRepo{
-		tableName: "s360-services-preprod",
+		tableNames: &tables,
 	}
 }
 
@@ -27,13 +45,13 @@ func createDynamoDBClient() *dynamodb.Client {
 	return dynamodb.NewFromConfig(cfg)
 }
 
-func (repo *dynamoDBRepo) FindAll() ([]models.Asset, error) {
+func (repo *dynamoDBRepo) FindAllAssets() ([]models.Asset, error) {
 	// Get a new DynamoDB client
 	dynamoDBClient := createDynamoDBClient()
 
 	// Build the query input parameters
 	params := dynamodb.ScanInput{
-		TableName: aws.String(repo.tableName),
+		TableName: aws.String(repo.tableNames.S360ServicesTable),
 	}
 
 	// Make the DynamoDB Query API call
@@ -58,7 +76,7 @@ func (repo *dynamoDBRepo) FindAll() ([]models.Asset, error) {
 	return assets, nil
 }
 
-func (repo *dynamoDBRepo) FindById(id string) (*models.Asset, error) {
+func (repo *dynamoDBRepo) FindAssetById(id string) (*models.Asset, error) {
 	// Get a new DynamoDB client
 	dynamoDBClient := createDynamoDBClient()
 
@@ -67,7 +85,7 @@ func (repo *dynamoDBRepo) FindById(id string) (*models.Asset, error) {
 		Key: map[string]types.AttributeValue{
 			"AssetID": &types.AttributeValueMemberS{Value: id},
 		},
-		TableName: aws.String(repo.tableName),
+		TableName: aws.String(repo.tableNames.S360ServicesTable),
 	}
 
 	// Get the item by ID
@@ -85,4 +103,64 @@ func (repo *dynamoDBRepo) FindById(id string) (*models.Asset, error) {
 	}
 
 	return &asset, nil
+}
+
+func (repo *dynamoDBRepo) FindAllAssetsMetrics() ([]models.AssetMetrics, error) {
+	// Get a new DynamoDB client
+	dynamoDBClient := createDynamoDBClient()
+
+	// Build the query input parameters
+	params := dynamodb.ScanInput{
+		TableName: aws.String(repo.tableNames.MetricTable),
+	}
+
+	// Make the DynamoDB Query API call
+	results, err := dynamoDBClient.Scan(context.Background(), &params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a assetsMetrics array and add all the existing assetMetrics
+	var assetsMetrics []models.AssetMetrics = []models.AssetMetrics{}
+	for _, i := range results.Items {
+		assetMetrics := models.AssetMetrics{}
+
+		err = attributevalue.UnmarshalMap(i, &assetMetrics)
+		if err != nil {
+			panic(err)
+		}
+		assetsMetrics = append(assetsMetrics, assetMetrics)
+	}
+
+	// Return the assets array
+	return assetsMetrics, nil
+}
+
+func (repo *dynamoDBRepo) FindAssetMetricsById(id string) (*models.AssetMetrics, error) {
+	// Get a new DynamoDB client
+	dynamoDBClient := createDynamoDBClient()
+
+	// Build the query input parameters
+	params := dynamodb.GetItemInput{
+		Key: map[string]types.AttributeValue{
+			"AssetID": &types.AttributeValueMemberS{Value: id},
+		},
+		TableName: aws.String(repo.tableNames.MetricTable),
+	}
+
+	// Get the item by ID
+	result, err := dynamoDBClient.GetItem(context.Background(), &params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map the dynamodb element to the asset metrics structure
+	assetMetrics := models.AssetMetrics{}
+
+	err = attributevalue.UnmarshalMap(result.Item, &assetMetrics)
+	if err != nil {
+		panic(err)
+	}
+
+	return &assetMetrics, nil
 }
