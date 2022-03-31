@@ -4,11 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go/aws"
+	dynamoDB "github.com/brianweber2/golang_examples/dynamodb_example/internal/db"
+	dynamoDBConfig "github.com/brianweber2/golang_examples/dynamodb_example/internal/db/config"
 	"github.com/brianweber2/golang_examples/dynamodb_example/pkg/models"
 )
 
@@ -31,31 +32,28 @@ var tables = Tables{
 
 type dynamoDBRepo struct {
 	tableNames *Tables
+	dynamoDB.DynamoDbApi
 }
 
 // NewDynamoDBRepository is the constructor function for the repo
 func NewDynamoDBRepository() OpexRepository {
+	ctx := context.Background()
+	dynamoDBConfig := dynamoDBConfig.NewDbConfig(ctx)
+
 	return &dynamoDBRepo{
-		tableNames: &tables,
+		tableNames:  &tables,
+		DynamoDbApi: dynamoDB.CreateDynamoDBClient(ctx, dynamoDBConfig),
 	}
 }
 
-func createDynamoDBClient() *dynamodb.Client {
-	cfg, _ := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("cgsre-ppd-aws"), config.WithRegion("us-west-2"))
-	return dynamodb.NewFromConfig(cfg)
-}
-
 func (repo *dynamoDBRepo) FindAllAssets() ([]models.Asset, error) {
-	// Get a new DynamoDB client
-	dynamoDBClient := createDynamoDBClient()
-
 	// Build the query input parameters
 	params := dynamodb.ScanInput{
 		TableName: aws.String(repo.tableNames.S360ServicesTable),
 	}
 
 	// Make the DynamoDB Query API call
-	results, err := dynamoDBClient.Scan(context.Background(), &params)
+	results, err := repo.DynamoDbApi.Scan(context.Background(), &params)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +75,6 @@ func (repo *dynamoDBRepo) FindAllAssets() ([]models.Asset, error) {
 }
 
 func (repo *dynamoDBRepo) FindAssetById(id string) (*models.Asset, error) {
-	// Get a new DynamoDB client
-	dynamoDBClient := createDynamoDBClient()
-
 	// Build the query input parameters
 	params := dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
@@ -89,7 +84,7 @@ func (repo *dynamoDBRepo) FindAssetById(id string) (*models.Asset, error) {
 	}
 
 	// Get the item by ID
-	result, err := dynamoDBClient.GetItem(context.Background(), &params)
+	result, err := repo.DynamoDbApi.GetItem(context.Background(), &params)
 	if err != nil {
 		return nil, err
 	}
@@ -106,16 +101,13 @@ func (repo *dynamoDBRepo) FindAssetById(id string) (*models.Asset, error) {
 }
 
 func (repo *dynamoDBRepo) FindAllAssetsMetrics() ([]models.AssetMetrics, error) {
-	// Get a new DynamoDB client
-	dynamoDBClient := createDynamoDBClient()
-
 	// Build the query input parameters
 	params := dynamodb.ScanInput{
 		TableName: aws.String(repo.tableNames.MetricTable),
 	}
 
 	// Make the DynamoDB Query API call
-	results, err := dynamoDBClient.Scan(context.Background(), &params)
+	results, err := repo.DynamoDbApi.Scan(context.Background(), &params)
 	if err != nil {
 		return nil, err
 	}
@@ -137,9 +129,6 @@ func (repo *dynamoDBRepo) FindAllAssetsMetrics() ([]models.AssetMetrics, error) 
 }
 
 func (repo *dynamoDBRepo) FindAssetMetricsById(id string) (*models.AssetMetrics, error) {
-	// Get a new DynamoDB client
-	dynamoDBClient := createDynamoDBClient()
-
 	// Build the query input parameters
 	params := dynamodb.GetItemInput{
 		Key: map[string]types.AttributeValue{
@@ -149,7 +138,7 @@ func (repo *dynamoDBRepo) FindAssetMetricsById(id string) (*models.AssetMetrics,
 	}
 
 	// Get the item by ID
-	result, err := dynamoDBClient.GetItem(context.Background(), &params)
+	result, err := repo.DynamoDbApi.GetItem(context.Background(), &params)
 	if err != nil {
 		return nil, err
 	}
