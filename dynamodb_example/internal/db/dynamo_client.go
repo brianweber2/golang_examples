@@ -14,6 +14,6 @@ type DynamoDbApi interface {
 }
 
 func CreateDynamoDBClient(ctx context.Context, dynamoDBConfig *dynamodbCfg.DynamoDBConfig) DynamoDbApi {
-	cfg, _ := config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile("cgsre-ppd-aws"), config.WithRegion("us-west-2"))
+	cfg, _ := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile("cgsre-ppd-aws"), config.WithRegion("us-west-2"))
 	return dynamodb.NewFromConfig(cfg)
 }

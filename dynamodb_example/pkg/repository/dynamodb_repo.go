@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go/aws"
 	dynamoDB "github.com/brianweber2/golang_examples/dynamodb_example/internal/db"
-	dynamoDBConfig "github.com/brianweber2/golang_examples/dynamodb_example/internal/db/config"
 	"github.com/brianweber2/golang_examples/dynamodb_example/pkg/models"
 )
 
@@ -31,18 +30,20 @@ var tables = Tables{
 }
 
 type dynamoDBRepo struct {
-	tableNames *Tables
-	dynamoDB.DynamoDbApi
+	tableNames  *Tables
+	DynamoDbApi dynamoDB.DynamoDbApi
 }
 
 // NewDynamoDBRepository is the constructor function for the repo
-func NewDynamoDBRepository() OpexRepository {
-	ctx := context.Background()
-	dynamoDBConfig := dynamoDBConfig.NewDbConfig(ctx)
+func NewDynamoDBRepository(client dynamoDB.DynamoDbApi) OpexRepository {
+	// ctx := context.Background()
+	// dynamoDBConfig := dynamoDBConfig.NewDbConfig(ctx)
 
 	return &dynamoDBRepo{
 		tableNames:  &tables,
-		DynamoDbApi: dynamoDB.CreateDynamoDBClient(ctx, dynamoDBConfig),
+		DynamoDbApi: client,
+		// DynamoDbApi: dynamoDB.CreateDynamoDBClient(ctx, dynamoDBConfig),
+
 	}
 }
 

@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
+	internal "github.com/brianweber2/golang_examples/dynamodb_example/internal/db"
+	dbConfig "github.com/brianweber2/golang_examples/dynamodb_example/internal/db/config"
 	"github.com/brianweber2/golang_examples/dynamodb_example/pkg/repository"
 )
 
 var (
-	repo repository.OpexRepository = repository.NewDynamoDBRepository()
+	ctx   context.Context           = context.Background()
+	dbCfg *dbConfig.DynamoDBConfig  = dbConfig.NewDbConfig(ctx)
+	repo  repository.OpexRepository = repository.NewDynamoDBRepository(internal.CreateDynamoDBClient(ctx, dbCfg))
 )
 
 func main() {
